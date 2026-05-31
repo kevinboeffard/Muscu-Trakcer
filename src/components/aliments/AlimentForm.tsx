@@ -4,7 +4,7 @@ import { CATEGORIES_ALIMENT } from '../../types'
 import Input from '../ui/Input'
 import Button from '../ui/Button'
 import Modal from '../ui/Modal'
-import BarcodeScanner from './BarcodeScanner'
+import OFFSearch from './OFFSearch'
 import AlimentImage from './AlimentImage'
 import type { OFFResult } from '../../hooks/useOpenFoodFacts'
 
@@ -23,7 +23,7 @@ export default function AlimentForm({ initial, onSave, onCancel }: Props) {
   const [prot,      setProt] = useState(String(initial?.macro?.proteines ?? ''))
   const [gluc,      setGluc] = useState(String(initial?.macro?.glucides  ?? ''))
   const [lip,       setLip]  = useState(String(initial?.macro?.lipides   ?? ''))
-  const [showScanner, setShowScanner] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
 
   const fill = (r: OFFResult) => {
     setNom(r.nom)
@@ -34,7 +34,7 @@ export default function AlimentForm({ initial, onSave, onCancel }: Props) {
     setProt(String(r.macro.proteines))
     setGluc(String(r.macro.glucides))
     setLip(String(r.macro.lipides))
-    setShowScanner(false)
+    setShowSearch(false)
   }
 
   const submit = (e: React.FormEvent) => {
@@ -57,18 +57,18 @@ export default function AlimentForm({ initial, onSave, onCancel }: Props) {
     <>
       <form onSubmit={submit} className="flex flex-col gap-4">
 
-        {/* Scanner CTA */}
+        {/* Search CTA */}
         <button
           type="button"
-          onClick={() => setShowScanner(true)}
+          onClick={() => setShowSearch(true)}
           className="w-full flex items-center gap-3 py-3 px-4 rounded-xl
             border-2 border-dashed border-indigo-500/50 bg-indigo-900/20
             hover:bg-indigo-900/40 hover:border-indigo-400 transition-all group"
         >
-          <span className="text-2xl group-hover:scale-110 transition-transform">📷</span>
+          <span className="text-2xl group-hover:scale-110 transition-transform">🔍</span>
           <div className="text-left">
-            <p className="text-indigo-300 font-semibold text-sm">Scanner le code-barres</p>
-            <p className="text-indigo-400/60 text-xs">Remplissage auto via Open Food Facts</p>
+            <p className="text-indigo-300 font-semibold text-sm">Rechercher sur Open Food Facts</p>
+            <p className="text-indigo-400/60 text-xs">Par nom de produit ou code-barres</p>
           </div>
           {imageUrl && (
             <div className="ml-auto">
@@ -83,7 +83,7 @@ export default function AlimentForm({ initial, onSave, onCancel }: Props) {
           <div className="flex-1 h-px bg-gray-700" />
         </div>
 
-        {/* Image preview + name row */}
+        {/* Name + image preview */}
         <div className="flex gap-3 items-start">
           <AlimentImage imageUrl={imageUrl || undefined} categorie={categorie || undefined} nom={nom} size="md" />
           <Input
@@ -128,8 +128,8 @@ export default function AlimentForm({ initial, onSave, onCancel }: Props) {
         </div>
       </form>
 
-      <Modal open={showScanner} onClose={() => setShowScanner(false)} title="📷 Scanner un produit" maxWidth="max-w-md">
-        <BarcodeScanner onResult={fill} onClose={() => setShowScanner(false)} />
+      <Modal open={showSearch} onClose={() => setShowSearch(false)} title="🔍 Rechercher un produit" maxWidth="max-w-md">
+        <OFFSearch onResult={fill} onClose={() => setShowSearch(false)} />
       </Modal>
     </>
   )
