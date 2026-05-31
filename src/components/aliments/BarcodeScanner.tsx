@@ -16,66 +16,15 @@ type ScanState =
   | { status: 'not_found'; barcode: string }
   | { status: 'error';     message: string }
 
-/* ------------------------------------------------------------------ */
-/* Type minimal pour l'API native BarcodeDetector (Chrome / Android)   */
-/* ------------------------------------------------------------------ */
-interface DetectedBarcode { rawValue: string }
-interface BarcodeDetectorLike {
-  detect(source: CanvasImageSource): Promise<DetectedBarcode[]>
-}
-interface BarcodeDetectorCtor {
-  new (opts?: { formats?: string[] }): BarcodeDetectorLike
-  getSupportedFormats?(): Promise<string[]>
-}
-declare global {
-  interface Window { BarcodeDetector?: BarcodeDetectorCtor }
-}
-
-/* Formats des codes-barres alimentaires (EAN / UPC + Code 128) */
-const ONE_D_FORMATS = [
-  BarcodeFormat.EAN_13,
-  BarcodeFormat.EAN_8,
-  BarcodeFormat.UPC_A,
-  BarcodeFormat.UPC_E,
-  BarcodeFormat.CODE_128,
-]
-const NATIVE_FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128']
-
-/* Petit bip de confirmation */
-function beep() {
-  try {
-    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    const ctx = new Ctx()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.type = 'square'
-    osc.frequency.value = 880
-    gain.gain.value = 0.08
-    osc.connect(gain); gain.connect(ctx.destination)
-    osc.start()
-    osc.stop(ctx.currentTime + 0.09)
-    osc.onended = () => ctx.close()
-  } catch { /* audio indispo : on ignore */ }
-}
-
-function cameraError(e: unknown): string {
-  const name = (e as { name?: string })?.name
-  if (name === 'NotAllowedError' || name === 'SecurityError')
-    return 'Acces a la camera refuse. Autorisez la camera puis reessayez.'
-  if (name === 'NotFoundError' || name === 'OverconstrainedError')
-    return 'Aucune camera arriere detectee sur cet appareil.'
-  if (name === 'NotReadableError')
-    return 'La camera est deja utilisee par une autre application.'
-  return 'Erreur camera. Verifiez les autorisations.'
-}
-
 export default function BarcodeScanner({ onResult, onClose }: Props) {
   const videoRef  = useRef<HTMLVideoElement>(null)
-  const [state, setState] = useState<ScanState>({ status: 'scanning' })
+  const [state, setState] = useState<ScanState>({ status: 'idle' })
   const [manual, setManual] = useState('')
 
+  const reset = () => setState({ status: 'idle' })
+
   useEffect(() => {
-    if (state.status !== 'scanning') return
+    if (state.status !== 'idle') return
     const reader = new BrowserMultiFormatReader()
     let stopped = false
 
@@ -105,8 +54,8 @@ export default function BarcodeScanner({ onResult, onClose }: Props) {
   const lookup = async (barcode: string) => {
     setState({ status: 'loading', barcode })
     try {
-      const off = await fetchByBarcode(code)
-      setState(off ? { status: 'found', result: off } : { status: 'not_found', barcode: code })
+      const off = await fetchByBarcode(barcode)
+      setState(off ? { status: 'found', result: off } : { status: 'not_found', barcode })
     } catch {
       setState({ status: 'error', message: 'Impossible de contacter Open Food Facts.' })
     }
@@ -115,7 +64,7 @@ export default function BarcodeScanner({ onResult, onClose }: Props) {
   return (
     <div className="flex flex-col gap-4">
       {/* Camera */}
-      <div className={`relative rounded-2xl overflow-hidden bg-black ${state.status !== 'scanning' ? 'hidden' : ''}`}>
+      <div className={`relative rounded-2xl overflow-hidden bg-black ${state.status !== 'idle' ? 'hidden' : ''}`}>
         <video ref={videoRef} className="w-full aspect-video object-cover" />
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="w-56 h-32 border-2 border-indigo-400 rounded-xl relative">
@@ -194,12 +143,12 @@ export default function BarcodeScanner({ onResult, onClose }: Props) {
         <div className="flex flex-col gap-3 items-center py-4">
           <p className="text-3xl">⚠️</p>
           <p className="text-red-400 font-medium">{state.message}</p>
-          <Button variant="secondary" onClick={() => setState({ status: 'scanning' })}>Réessayer</Button>
+          <Button variant="secondary" onClick={reset}>Réessayer</Button>
         </div>
       )}
 
       {/* Manual input */}
-      {state.status === 'scanning' && (
+      {state.status === 'idle' && (
         <div className="flex flex-col gap-2">
           <p className="text-xs text-gray-500 text-center">Ou entrez le code-barres manuellement</p>
           <div className="flex gap-2">
