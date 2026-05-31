@@ -140,9 +140,6 @@ export default function Login({ onLogin }: Props) {
         </div>
       )}
 
-      <p className="text-gray-600 text-xs text-center">
-        PIN par défaut : Kevin → <code>1111</code> · Gabin → <code>2222</code>
-      </p>
     </div>
   )
 }
